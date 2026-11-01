@@ -1,0 +1,15 @@
+{
+  "name": "the-primer-v2-web-e2e",
+  "version": "2.0.0",
+  "description": "The Primer v2: Edge ML Adaptive Scaffolding & E2E Parity Tests",
+  "scripts": {
+    "start": "python -m http.server 3100 --directory web",
+    "test:parite": ".venv/Scripts/python tests/parite.py",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run --headless"
+  },
+  "devDependencies": {
+    "cypress": "^13.17.0"
+  }
+}
+

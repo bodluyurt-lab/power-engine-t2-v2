@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Primer v2 — Dinamik Kurgu & ONNX Demo Laboratuvarı</title>
+<!-- onnxruntime-web 1.22.0: Tarayıcıda uçta (edge) WebAssembly çıkarımı -->
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.min.js"></script>
+<style>
+  :root {
+    --bg: #090d16;
+    --card-bg: #131c2e;
+    --card-border: #1e293b;
+    --fg: #f8fafc;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-hover: #0284c7;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --hud-bg: rgba(15, 23, 42, 0.95);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 14.5px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: #0b1120;
+    border-bottom: 1px solid var(--card-border);
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .brand { font-size: 18px; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 10px; }
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #1e293b;
+    color: #cbd5e1;
+  }
+  .badge.success { background: #14532d; color: #4ade80; border: 1px solid #22c55e; }
+  .badge.warning { background: #78350f; color: #fde047; border: 1px solid #f59e0b; }
+  .badge.danger { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+
+  /* MLOps HUD (Sabit Bilgi Paneli) */
+  #mlops-hud {
+    position: fixed;
+    top: 75px;
+    right: 20px;
+    width: 290px;
+    background: var(--hud-bg);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 15px rgba(56, 189, 248, 0.2);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+  }
+  .hud-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .hud-stat {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .hud-stat span:first-child { color: var(--muted); }
+  .hud-stat b { color: #f1f5f9; }
+  .hud-p-box {
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: #090d16;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    text-align: center;
+  }
+  .hud-p-val {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  main {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+  h2 { font-size: 19px; margin: 0 0 14px; color: #f1f5f9; display: flex; align-items: center; justify-content: space-between; }
+  
+  /* Hoca Demo Paneli */
+  .demo-banner {
+    background: linear-gradient(135deg, #1e1b4b, #0f172a);
+    border: 1px solid #6366f1;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+  }
+  .demo-btn-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .btn-demo-a {
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    color: #fff;
+    border: 0;
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
+  }
+  .btn-demo-a:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(220, 38, 38, 0.45); }
+  .btn-demo-b {
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #fff;
+    border: 0;
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+  }
+  .btn-demo-b:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45); }
+  .btn-sub { font-size: 12px; font-weight: normal; opacity: 0.9; margin-top: 4px; display: block; }
+
+  /* Hikaye Anlatısı */
+  .story-narrative {
+    background: #0b1120;
+    border-left: 4px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    font-size: 15px;
+    font-style: italic;
+    color: #e2e8f0;
+    margin-bottom: 18px;
+  }
+  .options-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .option-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    background: #1e293b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .option-label:hover { border-color: var(--accent); background: #24344d; }
+  .option-label input[type="radio"] { margin-top: 4px; accent-color: var(--accent); }
+  .option-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .telemetry-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 12px 16px;
+    background: #0b1120;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    margin: 16px 0;
+  }
+  .telemetry-item b { color: var(--accent); }
+
+  /* Sonuç Kutuları */
+  .scaffolding-box {
+    margin-top: 18px;
+    padding: 18px 20px;
+    border-radius: 10px;
+    border: 2px solid var(--warning);
+    background: rgba(245, 158, 11, 0.12);
+    color: #fde68a;
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+  .flow-box {
+    margin-top: 18px;
+    padding: 18px 20px;
+    border-radius: 10px;
+    border: 2px solid var(--success);
+    background: rgba(34, 197, 94, 0.12);
+    color: #86efac;
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .rec-btn {
+    background: #dc2626;
+    color: #fff;
+    font-weight: 700;
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rec-btn.recording {
+    background: #ef4444;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+  button.main-btn {
+    font: inherit;
+    font-weight: 700;
+    padding: 12px 24px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #090d16;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  button.main-btn:hover { background: var(--accent-hover); color: #fff; }
+
+  /* Ekran genişliğine göre HUD */
+  @media (max-width: 1200px) {
+    #mlops-hud { position: static; width: 100%; margin-bottom: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span>🧠 The Primer v2</span>
+    <span class="badge" id="runtime-status" data-cy="runtime-status">ONNX Wasm Yükleniyor…</span>
+  </div>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <!-- Dahili YouTube Demo Video Kaydedici -->
+    <button id="btn-recorder" class="rec-btn" onclick="toggleKayit()">
+      <span id="rec-dot">🔴</span> <span id="rec-text">Demo Kaydı Başlat (MP4/WebM)</span>
+    </button>
+    <span class="badge success" id="parity-pill" data-cy="parity-badge">Parite Eşdeğer (&lt; 1e-4)</span>
+  </div>
+</header>
+
+<!-- MLOps Canlı Telemetri HUD (Heads-Up Display) -->
+<div id="mlops-hud">
+  <div class="hud-title">
+    <span>MLOps Edge Telemetry</span>
+    <span id="hud-engine">Wasm v1.22</span>
+  </div>
+  <div class="hud-stat">
+    <span>Model Mimarisi:</span>
+    <b>Pipeline(Scale + LR)</b>
+  </div>
+  <div class="hud-stat">
+    <span>Inference Gecikmesi:</span>
+    <b id="hud-latency">— ms</b>
+  </div>
+  <div class="hud-stat">
+    <span>Kognitif Durum:</span>
+    <b id="hud-state">Bekleniyor</b>
+  </div>
+  <div class="hud-stat">
+    <span>Model Kararı:</span>
+    <b id="hud-decision" data-cy="hud-decision">—</b>
+  </div>
+  <div class="hud-p-box">
+    <div style="font-size:11px; color:var(--muted); margin-bottom:2px;">İPUTCU OLASILIĞI P(y=1)</div>
+    <div class="hud-p-val" id="hud-p" data-cy="p">0.0000</div>
+  </div>
+</div>
+
+<main>
+  <!-- 1. HOCA VE VİDEO DEMO KONTROL MERKEZİ -->
+  <div class="demo-banner">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0; font-size:17px; color:#c7d2fe;">🎬 60-90 Saniyelik Hoca Demo Simülasyon Paneli</h3>
+      <span class="badge" style="background:#312e81; color:#a5b4fc;">Demo Modu v2</span>
+    </div>
+    <p style="font-size:13px; color:#94a3b8; margin:6px 0 12px;">
+      Videoda iki farklı oyuncu tipinin davranışsal telemetrilerini modele göndererek çıktının ve arayüzün nasıl uyumlandığını gösterin:
+    </p>
+
+    <div class="demo-btn-group">
+      <!-- OYUNCU A -->
+      <button class="btn-demo-a" id="btn-run-player-a" data-cy="demo-player-a" onclick="oyuncuSimuleEt('A')">
+        🔴 1. Oyuncu A: Tereddütlü / Acemi Simülasyonu
+        <span class="btn-sub">Tereddüt: 42.0s · Değiştirme: 4 · Hata: 3 · Zor Dal 3 ➔ <b>İPUCU TETİKLENİR</b></span>
+      </button>
+
+      <!-- OYUNCU B -->
+      <button class="btn-demo-b" id="btn-run-player-b" data-cy="demo-player-b" onclick="oyuncuSimuleEt('B')">
+        🟢 2. Oyuncu B: Hızlı / Uzman Simülasyonu
+        <span class="btn-sub">Tereddüt: 3.5s · Değiştirme: 0 · Hata: 0 · Kolay Dal 1 ➔ <b>AKIŞ DERİNLEŞİR</b></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. ETKİLEŞİMLİ KURGU SAHNESİ -->
+  <div class="card" id="game-card">
+    <h2>
+      <span>🕹️ Bölüm 3: Kuantum Veri Merkezine Sızış</span>
+      <span class="badge" id="dyn-badge">Dinamik İskele Modu Aktif</span>
+    </h2>
+
+    <div class="story-narrative">
+      "Siber geçidin kapısı kilitlendi. Güvenlik yapay zekası nöronal dalgalarınızı tarıyor. 
+      Merkezi veritabanına sızmak için bir yol belirlemelisiniz. Zaman aleyhinize işliyor..."
+    </div>
+
+    <!-- Canlı Telemetri Barı -->
+    <div class="telemetry-bar">
+      <div class="telemetry-item">⏱️ Tereddüt Süresi: <b id="disp-timer" data-cy="disp-timer">0.0s</b></div>
+      <div class="telemetry-item">🔄 Karar Değiştirme: <b id="disp-changes" data-cy="disp-changes">0</b></div>
+      <div class="telemetry-item">⚠️ Önceki Hatalar: <b id="disp-errors">1</b></div>
+      <div class="telemetry-item">🎯 Seçilen Yol: <b id="disp-branch">Dal 2 (Orta)</b></div>
+    </div>
+
+    <!-- Seçenekler -->
+    <div class="options-group">
+      <label class="option-label" data-difficulty="1">
+        <input type="radio" name="story_choice" value="1" data-cy="choice-easy">
+        <div>
+          <b>A) Havalandırma Şaftından Sız (Doğrusal / Kolay Yol)</b>
+          <div class="option-meta">Zorluk Seviyesi: 1 · Risk: Minimal · Karışıklık Yok</div>
+        </div>
+      </label>
+
+      <label class="option-label" data-difficulty="2">
+        <input type="radio" name="story_choice" value="2" checked data-cy="choice-medium">
+        <div>
+          <b>B) Güvenlik Görevlisinin Kimlik Kartını Klonla</b>
+          <div class="option-meta">Zorluk Seviyesi: 2 · Biyometrik Doğrulama İster · Dikkat Gerektirir</div>
+        </div>
+      </label>
+
+      <label class="option-label" data-difficulty="3">
+        <input type="radio" name="story_choice" value="3" data-cy="choice-hard">
+        <div>
+          <b>C) Ana Güvenlik Çekirdeğine Doğrudan Kuantum Hack Yap</b>
+          <div class="option-meta">Zorluk Seviyesi: 3 · Yüksek Risk · Tuzak Algoritmaları Aktif</div>
+        </div>
+      </label>
+    </div>
+
+    <div style="display:flex; gap:12px; align-items:center; margin-top:16px;">
+      <button class="main-btn" id="btn-submit-choice" data-cy="btn-submit-choice">Kararı Onayla ve Uygula</button>
+      <span style="font-size:12px; color:var(--muted);">veya yukarıdaki Oyuncu A / Oyuncu B demo butonlarına tıklayın.</span>
+    </div>
+
+    <!-- OYUNCU A ÇIKTISI: DİNAMİK İSKELE & İPUCU -->
+    <div class="scaffolding-box" id="scaffolding-box" data-cy="hint-banner">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <b style="font-size:16px;">💡 THE PRIMER DİNAMİK İSKELESİ DEVREDE (OYUNCU A):</b>
+        <span class="badge warning">Tereddüt: Yüksek (P = <span id="hint-prob-badge">0.99</span>)</span>
+      </div>
+      <p style="margin:0 0 10px; font-size:14px; line-height:1.5;">
+        <b>Bilişsel Aşırı Yüklenme Algılandı:</b> Karar ekranında 40 saniyenin üzerinde duraksadınız ve 4 kez fikir değiştirdiniz. 
+        Kuantum güvenlik duvarı 3 saniyede bir şifre fazını değiştiriyor. Sızmayı garantilemek için konsol komutuna 
+        <code style="background:#090d16; padding:2px 6px; border-radius:4px; color:#38bdf8;">--bypass-phase-lock</code> parametresini ekleyin.
+      </p>
+      <div style="font-size:12px; color:#cbd5e1; background:rgba(0,0,0,0.25); padding:8px 12px; border-radius:6px;">
+        ℹ️ <i>Model Telemetrisi: Edge Wasm Çıkarımı <b><span id="hint-lat">1.2</span> ms</b> içinde tamamlandı. İpucu gösterimi oyuncunun oyunu terk etmesini (churn) engellemek için aktif edildi.</i>
+      </div>
+    </div>
+
+    <!-- OYUNCU B ÇIKTISI: DERİNLEŞTİRİLMİŞ UZMAN AKIŞI -->
+    <div class="flow-box" id="flow-box" data-cy="flow-banner">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <b style="font-size:16px;">🚀 UZMAN MODU: AKIŞ DERİNLEŞTİRİLDİ (OYUNCU B):</b>
+        <span class="badge success">Emin Oyuncu (P = <span id="flow-prob-badge">0.07</span>)</span>
+      </div>
+      <p style="margin:0 0 10px; font-size:14px; line-height:1.5;">
+        <b>Kesintisiz Akış Hali (Flow State):</b> Kararınız 3.5 saniyede, sıfır tereddüt ve hata geçmişi olmadan uygulandı. 
+        Model gereksiz ipucu göstermeyerek akışınızı bölmedi. Sistem sizi doğrudan <b>"Derin Kuantum Çekirdeği"</b> özel hikaye dalına yönlendirdi!
+      </p>
+      <div style="font-size:12px; color:#cbd5e1; background:rgba(0,0,0,0.25); padding:8px 12px; border-radius:6px;">
+        ℹ️ <i>Model Telemetrisi: İpucu Olasılığı <b>%7.5</b> (Eşik altı). Hikaye derinleştirilerek uzman oyuncuya meydan okuma seviyesi artırıldı.</i>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. VİDEO ÇEKİM KILAVUZU KARTI -->
+  <div class="card" style="border-color:#334155; background:#0b1120;">
+    <h3 style="margin:0 0 10px; color:#38bdf8; font-size:15px;">📹 60-90 Saniyelik Video Kayıt Rehberi (Hocaya Sunum)</h3>
+    <ol style="margin:0; padding-left:20px; font-size:13px; color:#cbd5e1; line-height:1.7;">
+      <li>Sağ üstteki <b>"🔴 Demo Kaydı Başlat"</b> butonuna basıp ekranınızı veya geçerli sekmeyi seçin.</li>
+      <li>Önce <b>"🔴 1. Oyuncu A Senaryosu"</b> butonuna basın: HUD'daki olasılık $0.99$'a fırlar, turuncu <b>Dinamik İskele & İpucu</b> paneli açılır. (Açıklayın: <i>"Oyuncu bocaladığı için model ipucu veriyor"</i>).</li>
+      <li>Ardından <b>"🟢 2. Oyuncu B Senaryosu"</b> butonuna basın: HUD'daki olasılık $0.07$'ye düşer, yeşil <b>Uzman Akışı</b> paneli açılır. (Açıklayın: <i>"Hızlı karar veren uzman oyuncuya ipucu vermeyerek akışı derinleştiriyor"</i>).</li>
+      <li>Kaydı Durdurun: Dosya YouTube uyumlu formatta otomatik bilgisayarınıza iner!</li>
+    </ol>
+  </div>
+</main>
+
+<script>
+ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/";
+
+let oturum = null;
+let tereddutBaslangic = Date.now();
+let kararDegistirmeSayaci = 0;
+let oncekiHataSayisi = 1;
+let timerInterval = null;
+
+function timerBaslat() {
+  tereddutBaslangic = Date.now();
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    const sn = ((Date.now() - tereddutBaslangic) / 1000).toFixed(1);
+    const disp = document.getElementById("disp-timer");
+    if (disp) disp.textContent = `${sn}s`;
+  }, 100);
+}
+
+document.querySelectorAll('input[name="story_choice"]').forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    kararDegistirmeSayaci++;
+    document.getElementById("disp-changes").textContent = kararDegistirmeSayaci;
+    const zorluk = e.target.value;
+    const isimler = { "1": "Dal 1 (Kolay)", "2": "Dal 2 (Orta)", "3": "Dal 3 (Zor)" };
+    document.getElementById("disp-branch").textContent = isimler[zorluk] || zorluk;
+  });
+});
+
+async function modeliYukle() {
+  const statusElem = document.getElementById("runtime-status");
+  try {
+    try {
+      oturum = await ort.InferenceSession.create("model/model.onnx");
+    } catch {
+      oturum = await ort.InferenceSession.create("model.onnx");
+    }
+    statusElem.textContent = "ONNX Runtime Hazır (Wasm)";
+    statusElem.className = "badge success";
+    timerBaslat();
+  } catch (err) {
+    statusElem.textContent = `Hata: ${err.message}`;
+    statusElem.className = "badge warning";
+  }
+}
+
+async function onnxInference(tereddut, degistirme, hata, zorluk) {
+  if (!oturum) throw new Error("ONNX oturumu henüz hazır değil!");
+  
+  const inputArr = new Float32Array([
+    Math.min(Math.max(Number(tereddut), 0.0), 120.0),
+    Number(degistirme),
+    Number(hata),
+    Number(zorluk)
+  ]);
+  
+  const tensor = new ort.Tensor("float32", inputArr, [1, 4]);
+  const t0 = performance.now();
+  const outputs = await oturum.run({ input: tensor });
+  const latency = (performance.now() - t0).toFixed(2);
+  
+  const label = Number(outputs.label.data[0]);
+  const probs = Array.from(outputs.probabilities.data);
+  
+  return { label, p0: probs[0], p1: probs[1], latency };
+}
+
+function hudGuncelle(res) {
+  document.getElementById("hud-latency").textContent = `${res.latency} ms`;
+  const pElem = document.getElementById("hud-p");
+  pElem.textContent = res.p1.toFixed(4);
+
+  const decElem = document.getElementById("hud-decision");
+  const stateElem = document.getElementById("hud-state");
+
+  if (res.p1 >= 0.50) {
+    pElem.style.color = "#f59e0b";
+    decElem.textContent = "İPUCU VER (1)";
+    decElem.style.color = "#f59e0b";
+    stateElem.textContent = "Tıkanma / Kararsızlık";
+    stateElem.style.color = "#ef4444";
+  } else {
+    pElem.style.color = "#22c55e";
+    decElem.textContent = "AKIŞI KORU (0)";
+    decElem.style.color = "#22c55e";
+    stateElem.textContent = "Optimal Akış Hali";
+    stateElem.style.color = "#22c55e";
+  }
+}
+
+// Oyuncu A ve B Simülasyonu (Demo Butonları)
+async function oyuncuSimuleEt(oyuncuTipi) {
+  const scaffBox = document.getElementById("scaffolding-box");
+  const flowBox = document.getElementById("flow-box");
+
+  if (oyuncuTipi === 'A') {
+    // Oyuncu A: Tereddütlü, bocalayan, 42s, 4 karar değiştirme, 3 hata, Dal 3 (Zor)
+    document.getElementById("disp-timer").textContent = "42.0s";
+    document.getElementById("disp-changes").textContent = "4";
+    document.getElementById("disp-errors").textContent = "3";
+    document.getElementById("disp-branch").textContent = "Dal 3 (Zor)";
+    document.querySelector('input[name="story_choice"][value="3"]').checked = true;
+
+    const res = await onnxInference(42.0, 4, 3, 3);
+    hudGuncelle(res);
+
+    scaffBox.style.display = "block";
+    flowBox.style.display = "none";
+    document.getElementById("hint-prob-badge").textContent = res.p1.toFixed(4);
+    document.getElementById("hint-lat").textContent = res.latency;
+
+  } else if (oyuncuTipi === 'B') {
+    // Oyuncu B: Hızlı, kendinden emin, 3.5s, 0 karar değiştirme, 0 hata, Dal 1 (Kolay)
+    document.getElementById("disp-timer").textContent = "3.5s";
+    document.getElementById("disp-changes").textContent = "0";
+    document.getElementById("disp-errors").textContent = "0";
+    document.getElementById("disp-branch").textContent = "Dal 1 (Kolay)";
+    document.querySelector('input[name="story_choice"][value="1"]').checked = true;
+
+    const res = await onnxInference(3.5, 0, 0, 1);
+    hudGuncelle(res);
+
+    scaffBox.style.display = "none";
+    flowBox.style.display = "block";
+    document.getElementById("flow-prob-badge").textContent = res.p1.toFixed(4);
+  }
+}
+
+// Kararı Onayla Butonu (Manuel Kullanım)
+document.getElementById("btn-submit-choice").addEventListener("click", async () => {
+  const tereddut = ((Date.now() - tereddutBaslangic) / 1000).toFixed(1);
+  const selectedRadio = document.querySelector('input[name="story_choice"]:checked');
+  const zorluk = selectedRadio ? Number(selectedRadio.value) : 2;
+
+  try {
+    const res = await onnxInference(tereddut, kararDegistirmeSayaci, oncekiHataSayisi, zorluk);
+    hudGuncelle(res);
+
+    const scaffBox = document.getElementById("scaffolding-box");
+    const flowBox = document.getElementById("flow-box");
+
+    if (res.label === 1 || res.p1 >= 0.50) {
+      scaffBox.style.display = "block";
+      flowBox.style.display = "none";
+      document.getElementById("hint-prob-badge").textContent = res.p1.toFixed(4);
+      document.getElementById("hint-lat").textContent = res.latency;
+    } else {
+      scaffBox.style.display = "none";
+      flowBox.style.display = "block";
+      document.getElementById("flow-prob-badge").textContent = res.p1.toFixed(4);
+    }
+  } catch (err) {
+    alert("Inference hatası: " + err.message);
+  }
+});
+
+// HTML5 MediaRecorder ile Ekran Kaydı & YouTube Uyumlu Video İndirme
+let mediaRecorder = null;
+let recordedChunks = [];
+
+async function toggleKayit() {
+  const btn = document.getElementById("btn-recorder");
+  const text = document.getElementById("rec-text");
+  const dot = document.getElementById("rec-dot");
+
+  if (!mediaRecorder || mediaRecorder.state === "inactive") {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: { ideal: 30 } },
+        audio: false
+      });
+      recordedChunks = [];
+      
+      let mimeType = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm';
+      }
+
+      mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "the-primer-v2-demo-video.webm";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        btn.className = "rec-btn";
+        text.textContent = "Demo Kaydı Başlat (MP4/WebM)";
+        dot.textContent = "🔴";
+      };
+
+      stream.getVideoTracks()[0].onended = () => {
+        if (mediaRecorder.state === "recording") mediaRecorder.stop();
+      };
+
+      mediaRecorder.start();
+      btn.className = "rec-btn recording";
+      text.textContent = "Kaydı Durdur ve İndir";
+      dot.textContent = "⏹️";
+
+    } catch (err) {
+      console.warn("Ekran kaydı iptal edildi veya desteklenmiyor:", err);
+    }
+  } else if (mediaRecorder.state === "recording") {
+    mediaRecorder.stop();
+  }
+}
+
+window.addEventListener("DOMContentLoaded", modeliYukle);
+</script>
+</body>
+</html>

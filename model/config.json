@@ -1,0 +1,112 @@
+{
+  "title": "The Primer v2: Adaptive Hint Classifier",
+  "description": "Oyuncunun davranışsal telemetrilerinden bilişsel tıkanmayı sezerek dinamik iskele / ipucu sağlayan ONNX modeli.",
+  "model_name": "the-primer-v2-hint-classifier",
+  "version": "2.0.0",
+  "task": "binary-classification",
+  "seed": 42,
+  "target": "ipucu_verilsin_mi",
+  "classes": [
+    "0",
+    "1"
+  ],
+  "class_labels": {
+    "0": "standart_akis",
+    "1": "ipucu_ver"
+  },
+  "threshold": 0.5,
+  "features": [
+    {
+      "name": "tereddut_suresi_sn",
+      "label": "Tereddüt Süresi (sn)",
+      "type": "float32",
+      "example": 42.0,
+      "range": [
+        0.0,
+        120.0
+      ]
+    },
+    {
+      "name": "karar_degistirme_sayisi",
+      "label": "Karar Değiştirme Sayısı",
+      "type": "int64",
+      "example": 4.0,
+      "range": [
+        0,
+        20
+      ]
+    },
+    {
+      "name": "onceki_hata_sayisi",
+      "label": "Önceki Hata Sayısı",
+      "type": "int64",
+      "example": 3.0,
+      "range": [
+        0,
+        10
+      ]
+    },
+    {
+      "name": "secilen_dal_zorlugu",
+      "label": "Seçilen Dal Zorluğu",
+      "type": "int64",
+      "example": 3.0,
+      "range": [
+        1,
+        3
+      ]
+    }
+  ],
+  "metrics": {
+    "accuracy": 0.8333,
+    "f1_macro": 0.8303,
+    "roc_auc": 0.8822,
+    "confusion_matrix": {
+      "tn": 29,
+      "fp": 4,
+      "fn": 6,
+      "tp": 21
+    }
+  },
+  "onnx": {
+    "input_name": "input",
+    "input_shape": [
+      null,
+      4
+    ],
+    "input_type": "float32",
+    "outputs": [
+      "label",
+      "probabilities"
+    ],
+    "opset": 17,
+    "max_probability_divergence": 1.2e-07,
+    "sha256": "6fdb00b33969dc6d3463291d377c9994d9bca40a21c00a61b8eebedfd0031161"
+  },
+  "eval_gate": {
+    "status": "PASSED",
+    "thresholds": {
+      "min_accuracy": 0.8,
+      "min_f1_macro": 0.75,
+      "min_roc_auc": 0.85,
+      "max_onnx_divergence": 0.0001
+    }
+  },
+  "reference_inference": {
+    "inputs": {
+      "tereddut_suresi_sn": 42.0,
+      "karar_degistirme_sayisi": 4,
+      "onceki_hata_sayisi": 3,
+      "secilen_dal_zorlugu": 3
+    },
+    "expected_label": 1,
+    "expected_p1_probability": 0.9945
+  },
+  "environment": {
+    "python_version": "3.12.10",
+    "sklearn_version": "1.9.1",
+    "onnx_version": "1.23.2",
+    "onnxruntime_version": "1.31.1"
+  },
+  "created_at": "2026-11-01T18:00:48.948941+00:00"
+}

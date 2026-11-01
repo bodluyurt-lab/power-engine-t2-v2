@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.log
+*.joblib
+!model/model.joblib
+
+# Node / Cypress
+node_modules/
+cypress/videos/
+cypress/screenshots/
+
+# hf_cli.py çıktıları
+_out/
+
+# Ortam / secret
+.env

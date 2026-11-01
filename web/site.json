@@ -1,0 +1,6 @@
+{
+  "model_repo": "5eyyah/the-primer-v2-hint-onnx",
+  "local_model_path": "model/model.onnx",
+  "local_config_path": "model/config.json",
+  "version": "2.0.0"
+}
