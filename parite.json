@@ -1,0 +1,148 @@
+{
+  "model_version": "2.0.0",
+  "tolerance": 0.0001,
+  "max_observed_divergence": 5.960464477539063e-08,
+  "parity_status": "PASSED",
+  "test_cases": [
+    {
+      "id": "senaryo_1_emin_oyuncu",
+      "aciklama": "Kendinden emin, hızlı karar veren, sıfır hatalı oyuncu (Kolay Dal)",
+      "inputs": {
+        "tereddut_suresi_sn": 3.5,
+        "karar_degistirme_sayisi": 0,
+        "onceki_hata_sayisi": 0,
+        "secilen_dal_zorlugu": 1
+      },
+      "sklearn": {
+        "label": 0,
+        "probabilities": [
+          0.924773,
+          0.075227
+        ]
+      },
+      "onnx": {
+        "label": 0,
+        "probabilities": [
+          0.924773,
+          0.075227
+        ]
+      },
+      "divergence": {
+        "max_absolute_difference": 2.9802322387695312e-08,
+        "passed": true
+      }
+    },
+    {
+      "id": "senaryo_2_bocalayan_oyuncu",
+      "aciklama": "Aşırı tereddütlü, 4 kez fikir değiştirmiş, 3 hatalı oyuncu (Zor Dal)",
+      "inputs": {
+        "tereddut_suresi_sn": 42.0,
+        "karar_degistirme_sayisi": 4,
+        "onceki_hata_sayisi": 3,
+        "secilen_dal_zorlugu": 3
+      },
+      "sklearn": {
+        "label": 1,
+        "probabilities": [
+          0.005495,
+          0.994505
+        ]
+      },
+      "onnx": {
+        "label": 1,
+        "probabilities": [
+          0.005495,
+          0.994505
+        ]
+      },
+      "divergence": {
+        "max_absolute_difference": 5.960464477539063e-08,
+        "passed": true
+      }
+    },
+    {
+      "id": "senaryo_3_sinir_yavas_okuyucu",
+      "aciklama": "Sınır Durum: Metni yavaş okuyan ama net kararlı oyuncu (Orta Dal)",
+      "inputs": {
+        "tereddut_suresi_sn": 22.0,
+        "karar_degistirme_sayisi": 0,
+        "onceki_hata_sayisi": 1,
+        "secilen_dal_zorlugu": 2
+      },
+      "sklearn": {
+        "label": 0,
+        "probabilities": [
+          0.595312,
+          0.404688
+        ]
+      },
+      "onnx": {
+        "label": 0,
+        "probabilities": [
+          0.595312,
+          0.404688
+        ]
+      },
+      "divergence": {
+        "max_absolute_difference": 5.960464477539063e-08,
+        "passed": true
+      }
+    },
+    {
+      "id": "senaryo_4_orta_tereddut_kararsiz",
+      "aciklama": "Orta süre tereddütlü, seçenekler arasında kararsız kalmış oyuncu (Zor Dal)",
+      "inputs": {
+        "tereddut_suresi_sn": 28.5,
+        "karar_degistirme_sayisi": 3,
+        "onceki_hata_sayisi": 2,
+        "secilen_dal_zorlugu": 3
+      },
+      "sklearn": {
+        "label": 1,
+        "probabilities": [
+          0.044794,
+          0.955206
+        ]
+      },
+      "onnx": {
+        "label": 1,
+        "probabilities": [
+          0.044794,
+          0.955206
+        ]
+      },
+      "divergence": {
+        "max_absolute_difference": 2.9802322387695312e-08,
+        "passed": true
+      }
+    },
+    {
+      "id": "senaryo_5_yeni_baslayan_hizli_hatali",
+      "aciklama": "Hızlı ama önceki adımlarda hata yapmış oyuncu (Kolay Dal)",
+      "inputs": {
+        "tereddut_suresi_sn": 7.0,
+        "karar_degistirme_sayisi": 1,
+        "onceki_hata_sayisi": 2,
+        "secilen_dal_zorlugu": 1
+      },
+      "sklearn": {
+        "label": 0,
+        "probabilities": [
+          0.65428,
+          0.34572
+        ]
+      },
+      "onnx": {
+        "label": 0,
+        "probabilities": [
+          0.65428,
+          0.34572
+        ]
+      },
+      "divergence": {
+        "max_absolute_difference": 0.0,
+        "passed": true
+      }
+    }
+  ]
+}
