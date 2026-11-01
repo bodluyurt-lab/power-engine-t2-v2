@@ -1,36 +1,35 @@
-# Ağ gerektirmeyen kontroller: Rails API testleri (fixture model) + mobil typecheck.
 name: ci
 
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
-  rails-api:
+  mlops-parity-tests:
+    name: Model Eğitimi, Eval Gate ve Diferansiyel Parite Testleri
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: rails-api
     steps:
-      - uses: actions/checkout@v4
-      - uses: ruby/setup-ruby@v1
-        with:
-          working-directory: rails-api
-          bundler-cache: true
-      - run: bin/rails test
+      - name: Depoyu Klonla
+        uses: actions/checkout@v4
 
-  mobile:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mobile
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Python 3.12 Kur
+        uses: actions/setup-python@v5
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
-      - run: npm ci
-      - run: npx tsc --noEmit
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Bağımlılıkları Yükle
+        run: |
+          python -m pip install --upgrade pip
+          pip install scikit-learn==1.6.1 pandas joblib skl2onnx onnx onnxruntime
+
+      - name: Model Eğitimi & Eval Kapısı (train.py)
+        run: python train.py --veri data/oturumlar.csv --cikis model
+
+      - name: Python Oracle Diferansiyel Parite Testi (parite.py)
+        run: python tests/parite.py
+
+      - name: Birim Testleri Çalıştır (unittest)
+        run: python -m unittest discover -s tests -v
